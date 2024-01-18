@@ -8,17 +8,14 @@ app.get("/", (req, res) => {
   res.send("Welcome to Express");
 });
 
-app.get("/list", (req, res) => {
-  const myObject = {
-    array1: [1, 2, 3, 4, 5],
-    array2: ["apple", "banana", "orange"],
-    array3: [true, false, true, true],
-    array4: [10.5, 20.3, 15.8],
-    array5: [
-      ["a", "b", "c"],
-      [1, 2, 3, 4],
-    ],
-  };
+app.get("/api/users", (req, res) => {
+  const myObject = [
+    { id: 1, name: "Alice", age: 25, city: "New York" },
+    { id: 2, name: "Bob", age: 30, city: "San Francisco" },
+    { id: 3, name: "Charlie", age: 22, city: "Los Angeles" },
+    { id: 4, name: "David", age: 28, city: "Chicago" },
+    { id: 5, name: "Eva", age: 35, city: "Miami" },
+  ];
 
   res.json(myObject);
 });
