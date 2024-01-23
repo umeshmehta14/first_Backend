@@ -2,6 +2,8 @@ import { Router } from "express";
 import {
   changeCurrentPassword,
   getCurrentUser,
+  getUserProfile,
+  getWatchHistory,
   loginUser,
   logoutUser,
   refreshAccessToken,
@@ -38,5 +40,8 @@ router
 router
   .route("/update-coverImage")
   .post(verifyJwt, upload.single("coverImage"), updateCoverImage);
+
+router.route("/channel/:username").get(verifyJwt, getUserProfile);
+router.route("/watch-history").get(verifyJwt, getWatchHistory);
 
 export default router;
