@@ -1,9 +1,12 @@
-import { isValidObjectId } from "mongoose";
+import Mongoose, { isValidObjectId } from "mongoose";
 import { Video } from "../models/video.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import {
+  deleteFromCloudinary,
+  uploadOnCloudinary,
+} from "../utils/cloudinary.js";
 
 const getAllVideos = asyncHandler(async (req, res) => {
   const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query;
@@ -57,7 +60,6 @@ const publishAVideo = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, video, "video is uploaded successfully"));
 });
 
-//TODO: get video by id
 const getVideoById = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
 
@@ -65,7 +67,28 @@ const getVideoById = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Invalid video id");
   }
 
-  const video = await Video.findById(videoId);
+  const video = await Video.aggregate([
+    {
+      $match: {
+        _id: new Mongoose.Types.ObjectId(videoId),
+      },
+    },
+    {
+      $lookup: {
+        from: "likes",
+        localField: "_id",
+        foreignField: "video",
+        as: "likes",
+      },
+    },
+    {
+      $addFields: {
+        likes: {
+          $size: "$likes",
+        },
+      },
+    },
+  ]);
 
   if (!video) {
     throw new ApiError(404, "Video not found");
@@ -74,5 +97,66 @@ const getVideoById = asyncHandler(async (req, res) => {
     .status(200)
     .json(new ApiResponse(200, video, "video fetched successfully"));
 });
+const updateVideo = asyncHandler(async (req, res) => {
+  const { videoId } = req.params;
 
-export { getAllVideos, publishAVideo, getVideoById };
+  const { title, description } = req.body;
+
+  if (!isValidObjectId(videoId)) {
+    throw new ApiError(400, "Invalid video id");
+  }
+
+  const video = await Video.findById(videoId);
+
+  if (!video) {
+    throw new ApiError(404, "Video file not found");
+  }
+
+  if (title) {
+    video.title = title;
+  }
+
+  if (description) {
+    video.description = description;
+  }
+
+  if (req.file) {
+    const thumbnailLocalPath = req.file?.path;
+    if (!thumbnail) {
+      throw new ApiError(400, "thumbnail not found");
+    }
+    const thumbnailPublicId = video.thumbnail.PublicId;
+    const thumbnail = await uploadOnCloudinary(thumbnailLocalPath);
+    await deleteFromCloudinary(thumbnailPublicId);
+  }
+  await video.save();
+
+  const updatedVideo = await Video.aggregate([
+    {
+      $match: {
+        _id: new Mongoose.Types.ObjectId(videoId),
+      },
+    },
+    {
+      $lookup: {
+        from: "likes",
+        localField: "_id",
+        foreignField: "video",
+        as: "likes",
+      },
+    },
+    {
+      $addFields: {
+        likes: {
+          $size: "$likes",
+        },
+      },
+    },
+  ]);
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, updatedVideo, "video updated successfully"));
+});
+
+export { getAllVideos, publishAVideo, getVideoById, updateVideo };
