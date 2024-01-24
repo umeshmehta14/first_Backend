@@ -97,6 +97,7 @@ const getVideoById = asyncHandler(async (req, res) => {
     .status(200)
     .json(new ApiResponse(200, video, "video fetched successfully"));
 });
+
 const updateVideo = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
 
@@ -122,11 +123,19 @@ const updateVideo = asyncHandler(async (req, res) => {
 
   if (req.file) {
     const thumbnailLocalPath = req.file?.path;
-    if (!thumbnail) {
+    if (!thumbnailLocalPath) {
       throw new ApiError(400, "thumbnail not found");
     }
-    const thumbnailPublicId = video.thumbnail.PublicId;
+    const thumbnailPublicId = video.thumbnail.publicId;
+
     const thumbnail = await uploadOnCloudinary(thumbnailLocalPath);
+    console.log("res", thumbnail);
+    if (!thumbnail) {
+      throw new ApiError(500, "something went wrong while updating thumbnail");
+    } else {
+      video.thumbnail.url = thumbnail.url;
+      video.thumbnail.publicId = thumbnail.public_id;
+    }
     await deleteFromCloudinary(thumbnailPublicId);
   }
   await video.save();
@@ -157,6 +166,14 @@ const updateVideo = asyncHandler(async (req, res) => {
   return res
     .status(200)
     .json(new ApiResponse(200, updatedVideo, "video updated successfully"));
+});
+
+const deleteVideo = asyncHandler(async (req, res) => {
+  const { videoId } = req.params;
+
+  if (!isValidObjectId(videoId)) {
+    throw new ApiError(400, "Invalid video Id");
+  }
 });
 
 export { getAllVideos, publishAVideo, getVideoById, updateVideo };
