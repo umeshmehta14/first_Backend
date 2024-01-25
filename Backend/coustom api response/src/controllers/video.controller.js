@@ -5,6 +5,7 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import {
   deleteFromCloudinary,
+  deleteVideoFromCloudinary,
   uploadOnCloudinary,
 } from "../utils/cloudinary.js";
 
@@ -174,6 +175,26 @@ const deleteVideo = asyncHandler(async (req, res) => {
   if (!isValidObjectId(videoId)) {
     throw new ApiError(400, "Invalid video Id");
   }
+
+  const video = await Video.findById(videoId);
+
+  if (!video) throw new ApiError(401, "video not found");
+
+  const thumbnailPublicId = video.thumbnail.publicId;
+  const videoPublicId = video.videoFile.publicId;
+
+  console.log(videoPublicId);
+
+  const deletedFile = await Video.findByIdAndDelete(videoId);
+
+  if (!deletedFile) throw new ApiError(401, "Video not found");
+
+  await deleteVideoFromCloudinary(videoPublicId);
+  await deleteFromCloudinary(thumbnailPublicId);
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, {}, "video deleted successfully"));
 });
 
-export { getAllVideos, publishAVideo, getVideoById, updateVideo };
+export { getAllVideos, publishAVideo, getVideoById, updateVideo, deleteVideo };

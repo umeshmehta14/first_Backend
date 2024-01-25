@@ -11,7 +11,6 @@ const uploadOnCloudinary = async (localFile) => {
   try {
     if (!localFile) return null;
 
-    console.log("l file", localFile);
     const response = await cloudinary.uploader.upload(localFile, {
       resource_type: "auto",
     });
@@ -26,10 +25,24 @@ const uploadOnCloudinary = async (localFile) => {
 const deleteFromCloudinary = async (publicId) => {
   try {
     const result = await cloudinary.uploader.destroy(publicId);
+    console.log("result", result);
     return result;
   } catch (error) {
     return null;
   }
 };
 
-export { uploadOnCloudinary, deleteFromCloudinary };
+const deleteVideoFromCloudinary = async (publicId) => {
+  try {
+    const result = await cloudinary.api.delete_resources([publicId], {
+      resource_type: "video",
+    });
+    console.log("result", result);
+    return result;
+  } catch (error) {
+    console.error("Error deleting video from Cloudinary:", error);
+    return null;
+  }
+};
+
+export { uploadOnCloudinary, deleteFromCloudinary, deleteVideoFromCloudinary };
