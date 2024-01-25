@@ -9,9 +9,9 @@ import {
   uploadOnCloudinary,
 } from "../utils/cloudinary.js";
 
+//TODO: get all videos based on query, sort, pagination
 const getAllVideos = asyncHandler(async (req, res) => {
   const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query;
-  //TODO: get all videos based on query, sort, pagination
 });
 
 const publishAVideo = asyncHandler(async (req, res) => {
@@ -83,7 +83,51 @@ const getVideoById = asyncHandler(async (req, res) => {
       },
     },
     {
+      $lookup: {
+        from: "users",
+        localField: "owner",
+        foreignField: "_id",
+        as: "owner",
+        pipeline: [
+          {
+            $lookup: {
+              from: "subscriptions",
+              localField: "_id",
+              foreignField: "channel",
+              as: "subscribers",
+            },
+          },
+          {
+            $addFields: {
+              subcribersCount: {
+                $size: "$subscribers",
+              },
+              isSubscribed: {
+                $cond: {
+                  if: { $in: [req.user?._id, "$subscribers.subscriber"] },
+                  then: true,
+                  else: false,
+                },
+              },
+            },
+          },
+          {
+            $project: {
+              fullname: 1,
+              username: 1,
+              avatar: 1,
+              subcribersCount: 1,
+              isSubscribed: 1,
+            },
+          },
+        ],
+      },
+    },
+    {
       $addFields: {
+        owner: {
+          $first: "$owner",
+        },
         likes: {
           $size: "$likes",
         },
