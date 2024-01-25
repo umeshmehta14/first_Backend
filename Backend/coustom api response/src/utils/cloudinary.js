@@ -37,10 +37,8 @@ const deleteVideoFromCloudinary = async (publicId) => {
     const result = await cloudinary.api.delete_resources([publicId], {
       resource_type: "video",
     });
-    console.log("result", result);
     return result;
   } catch (error) {
-    console.error("Error deleting video from Cloudinary:", error);
     return null;
   }
 };

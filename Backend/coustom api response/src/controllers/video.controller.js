@@ -183,8 +183,6 @@ const deleteVideo = asyncHandler(async (req, res) => {
   const thumbnailPublicId = video.thumbnail.publicId;
   const videoPublicId = video.videoFile.publicId;
 
-  console.log(videoPublicId);
-
   const deletedFile = await Video.findByIdAndDelete(videoId);
 
   if (!deletedFile) throw new ApiError(401, "Video not found");
