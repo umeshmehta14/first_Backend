@@ -9,9 +9,117 @@ import {
   uploadOnCloudinary,
 } from "../utils/cloudinary.js";
 
-//TODO: get all videos based on query, sort, pagination
 const getAllVideos = asyncHandler(async (req, res) => {
   const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query;
+
+  if (!isValidObjectId(userId)) {
+    throw new ApiError(401, "Invalid user id");
+  }
+
+  if (!query?.trim()) {
+    throw new ApiError(400, "Invalid query");
+  }
+
+  if (!["createdAt", "views", "duration"].includes(sortBy.toString())) {
+    throw new ApiError(
+      400,
+      "Sorted by must be one of createdAt, views, duration"
+    );
+  }
+
+  if (!["asc", "desc"].includes(sortType.toString())) {
+    throw new ApiError(
+      400,
+      "Sorted type must be one of ascending(asc) or descending(desc)"
+    );
+  }
+
+  const skip = (page - 1) * limit;
+
+  const videos = await Video.aggregate([
+    {
+      $match: {
+        $or: [
+          { title: { $regex: query, $options: "i" } },
+          { description: { $regex: query, $options: "i" } },
+        ],
+      },
+    },
+    {
+      $lookup: {
+        from: "likes",
+        localField: "_id",
+        foreignField: "video",
+        as: "likes",
+      },
+    },
+    {
+      $lookup: {
+        from: "users",
+        localField: "owner",
+        foreignField: "_id",
+        as: "owner",
+        pipeline: [
+          {
+            $lookup: {
+              from: "subscriptions",
+              localField: "_id",
+              foreignField: "channel",
+              as: "subscribers",
+            },
+          },
+          {
+            $addFields: {
+              subcribersCount: {
+                $size: "$subscribers",
+              },
+              isSubscribed: {
+                $cond: {
+                  if: { $in: [req.user?._id, "$subscribers.subscriber"] },
+                  then: true,
+                  else: false,
+                },
+              },
+            },
+          },
+          {
+            $project: {
+              username: 1,
+              avatar: 1,
+              subcribersCount: 1,
+              isSubscribed: 1,
+              thumbnail: 1,
+            },
+          },
+        ],
+      },
+    },
+    {
+      $addFields: {
+        owner: {
+          $first: "$owner",
+        },
+        likes: {
+          $size: "$likes",
+        },
+      },
+    },
+    {
+      $sort: {
+        [sortBy]: sortType === "desc" ? -1 : 1,
+      },
+    },
+    { $skip: skip },
+    { $limit: parseInt(limit) },
+  ]);
+
+  if (videos?.length === 0) {
+    throw new ApiError(400, "No videos found");
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, videos, "Videos fetched successfully"));
 });
 
 const publishAVideo = asyncHandler(async (req, res) => {
