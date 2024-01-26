@@ -16,6 +16,12 @@ const getAllVideos = asyncHandler(async (req, res) => {
     throw new ApiError(401, "Invalid user id");
   }
 
+  if (!Number(page) || !Number(limit))
+    throw new ApiError(400, "Invalid number");
+
+  if (Number(page) < 1 || Number(limit) < 1)
+    throw new ApiError(400, "Page and limit must be greater then 0");
+
   if (!query?.trim()) {
     throw new ApiError(400, "Invalid query");
   }
