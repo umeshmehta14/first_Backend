@@ -8,7 +8,7 @@ const subscriptionSchema = new Schema(
       ref: "User",
     },
 
-    subsciber: {
+    subscriber: {
       // one who is subscribing
       type: Schema.Types.ObjectId,
       ref: "User",
