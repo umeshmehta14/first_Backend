@@ -84,10 +84,52 @@ const getUserChannelSubscribers = asyncHandler(async (req, res) => {
     .json(
       new ApiResponse(
         200,
-        subscribers[0].subscriber,
+        subscribers[0]?.subscriber || [],
         "subscribers fetched successfully"
       )
     );
 });
 
-export { toggleSubscription, getUserChannelSubscribers };
+const getSubscribedChannels = asyncHandler(async (req, res) => {
+  const { subscriberId } = req.params;
+
+  if (!isValidObjectId(subscriberId)) {
+    throw new ApiError(400, "invalid subscriber id");
+  }
+
+  const channels = await Subscription.aggregate([
+    {
+      $match: {
+        subscriber: new mongoose.Types.ObjectId(subscriberId),
+      },
+    },
+    {
+      $lookup: {
+        from: "users",
+        localField: "channel",
+        foreignField: "_id",
+        as: "channel",
+        pipeline: [
+          {
+            $project: {
+              username: 1,
+              "avatar.url": 1,
+              _id: 1,
+            },
+          },
+        ],
+      },
+    },
+  ]);
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        channels[0]?.channel || [],
+        "subscribed channels fetched successfully"
+      )
+    );
+});
+export { toggleSubscription, getUserChannelSubscribers, getSubscribedChannels };
